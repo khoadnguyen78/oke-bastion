@@ -77,6 +77,35 @@ jobs:
           export bastion_session_ocid=`cat ~/bastion_session.json | grep bastionsession | awk '{print $2}' | tail -1 | tr -d '"'`          
           echo "bastion_session_ocid=$bastion_session_ocid" >> "$GITHUB_ENV"
 
+      - name: Get GitHub Runner Public IP
+        run: |
+          IP=$(curl -s https://api.ipify.org)
+          echo "RUNNER_IP=$IP" >> $GITHUB_ENV
+          echo "Runner IP: $IP"
+
+      - name: Add Runner IP to Bastion Allowlist
+        run: |
+          NEW_IP="${RUNNER_IP}/32"
+
+          # Get existing allowlist as JSON array
+          CURRENT=$(oci bastion bastion get \
+            --bastion-id ${{ secrets.BASTION_OCID }} \
+            --query 'data."client-cidr-block-allow-list"' \
+            --raw-output)
+
+          echo "Current allowlist: $CURRENT"
+
+          # Use jq to append only if not already present
+          UPDATED=$(echo "$CURRENT" | jq --arg ip "$NEW_IP" '
+            if index($ip) then . else . + [$ip] end
+          ')
+
+          echo "Updated allowlist: $UPDATED"
+
+          oci bastion bastion update \
+            --bastion-id ${{ secrets.BASTION_OCID }} \
+            --client-cidr-block-allow-list "$UPDATED"
+
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -93,7 +122,7 @@ jobs:
         #   echo "---------------------------------------------------------------"
         #   ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
         #   done
-        
+
         run: |
           ssh -i ~/.ssh/id_rsa \
           -o ExitOnForwardFailure=yes \
