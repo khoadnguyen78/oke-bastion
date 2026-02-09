@@ -77,32 +77,32 @@ jobs:
           export bastion_session_ocid=`cat ~/bastion_session.json | grep bastionsession | awk '{print $2}' | tail -1 | tr -d '"'`          
           echo "bastion_session_ocid=$bastion_session_ocid" >> "$GITHUB_ENV"
 
-      - name: Get GitHub Runner Public IP
-        run: |
-          IP=$(curl -s https://api.ipify.org)
-          echo "RUNNER_IP=$IP" >> $GITHUB_ENV
-          echo "Runner IP: $IP"
+      # - name: Get GitHub Runner Public IP
+      #   run: |
+      #     IP=$(curl -s https://api.ipify.org)
+      #     echo "RUNNER_IP=$IP" >> $GITHUB_ENV
+      #     echo "Runner IP: $IP"
 
-      - name: Add Runner IP to Bastion Allowlist
-        run: |
-          NEW_IP="${RUNNER_IP}/32"
+      # - name: Add Runner IP to Bastion Allowlist
+      #   run: |
+      #     NEW_IP="${RUNNER_IP}/32"
 
-          # Get existing allowlist as JSON array
-          CURRENT=$(oci bastion bastion get \
-            --bastion-id ${{ secrets.BASTION_OCID }} \
-            --query 'data."client-cidr-block-allow-list"' \
-            --raw-output)
+      #     # Get existing allowlist as JSON array
+      #     CURRENT=$(oci bastion bastion get \
+      #       --bastion-id ${{ secrets.BASTION_OCID }} \
+      #       --query 'data."client-cidr-block-allow-list"' \
+      #       --raw-output)
 
-          echo "Current allowlist: $CURRENT"
+      #     echo "Current allowlist: $CURRENT"
 
-          # Use jq to append only if not already present
-          UPDATED=$(echo "$CURRENT" | jq --arg ip "$NEW_IP" '
-            if index($ip) then . else . + [$ip] end
-          ')
+      #     # Use jq to append only if not already present
+      #     UPDATED=$(echo "$CURRENT" | jq --arg ip "$NEW_IP" '
+      #       if index($ip) then . else . + [$ip] end
+      #     ')
 
-          echo "Updated allowlist: $UPDATED"
+      #     echo "Updated allowlist: $UPDATED"
 
-          oci bastion bastion update --bastion-id ${{ secrets.BASTION_OCID }} --client-cidr-list "$UPDATED" --force
+      #     oci bastion bastion update --bastion-id ${{ secrets.BASTION_OCID }} --client-cidr-list "$UPDATED" --force
 
       - name: Install kubectl
         run: |
@@ -128,7 +128,7 @@ jobs:
           -o ServerAliveCountMax=3 \
           -o StrictHostKeyChecking=no \
           -N -L 6443:${oke_private_ip}:6443 \
-          ${bastion_session_ocid}@${{ secrets.BASTION_HOST }} &
+          ${bastion_session_ocid}@${{ secrets.BASTION_HOST }} > ssh_tunnel.log 2>&1 &
 
       - name: Noti
         run: |
