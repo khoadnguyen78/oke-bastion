@@ -130,10 +130,10 @@ jobs:
           -N -L 6443:${oke_private_ip}:6443 \
           ${bastion_session_ocid}@${{ secrets.BASTION_HOST }} > ssh_tunnel.log 2>&1 &
 
-      - name: Noti
-        run: |
-          sleep 5
-          nc -zv 127.0.0.1 6443
+      # - name: Noti
+      #   run: |
+      #     sleep 5
+      #     nc -zv 127.0.0.1 6443
 
       - name: Configure OKE Cluster
         run: |
