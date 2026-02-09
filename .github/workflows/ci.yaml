@@ -102,9 +102,7 @@ jobs:
 
           echo "Updated allowlist: $UPDATED"
 
-          oci bastion bastion update \
-            --bastion-id ${{ secrets.BASTION_OCID }} \
-            --client-cidr-block-allow-list "$UPDATED"
+          oci bastion bastion update --bastion-id ${{ secrets.BASTION_OCID }} --client-cidr-list "$UPDATED" -y
 
       - name: Install kubectl
         run: |
