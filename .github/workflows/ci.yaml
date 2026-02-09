@@ -84,15 +84,29 @@ jobs:
           sudo mv kubectl /usr/local/bin
 
       - name: Start SSH Tunnel to OKE Cluster
-        run: |          
-          ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
-          while [ $? != 0 ]
-          do
-          echo "---------------------------------------------------------------"
-          echo "Attempting again"
-          echo "---------------------------------------------------------------"
-          ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
-          done
+        # run: |          
+        #   ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
+        #   while [ $? != 0 ]
+        #   do
+        #   echo "---------------------------------------------------------------"
+        #   echo "Attempting again"
+        #   echo "---------------------------------------------------------------"
+        #   ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
+        #   done
+        
+        run: |
+          ssh -i ~/.ssh/id_rsa \
+          -o ExitOnForwardFailure=yes \
+          -o ServerAliveInterval=30 \
+          -o ServerAliveCountMax=3 \
+          -o StrictHostKeyChecking=no \
+          -N -L 6443:${oke_private_ip}:6443 \
+          ${bastion_session_ocid}@${{ secrets.BASTION_HOST }} &
+
+      - name: Noti
+        run: |
+          sleep 5
+          nc -zv 127.0.0.1 6443
 
       - name: Configure OKE Cluster
         run: |
