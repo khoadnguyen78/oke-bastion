@@ -167,6 +167,13 @@ jobs:
       - name: Verify access
         run: |
           kubectl get no
+        
+      - name: Debug files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Repo contents:"
+          ls -al -R
 
       - name: Deploy to OKE
         run: |
