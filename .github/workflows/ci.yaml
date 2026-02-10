@@ -135,7 +135,10 @@ jobs:
         #     echo "---------------------------------------------------------------"
         #   fi
         run: |
+          oci ce cluster create-kubeconfig --cluster-id ${{ vars.OKE_CLUSTER_OCID }} --file $HOME/.kube/config --region ${{ secrets.OCI_CLI_REGION }} --token-version 2.0.0  --kube-endpoint PRIVATE_ENDPOINT
+          sleep 5
           sed -i 's#https://.*:6443#https://127.0.0.1:6443#g' $HOME/.kube/config
+          sleep 5
 
       - name: Start SSH Tunnel to OKE Cluster
         # run: |          
