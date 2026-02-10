@@ -17,6 +17,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Check OCI CLI installation
         run: |  
           if ! command -v oci &> /dev/null; then
@@ -30,38 +31,6 @@ jobs:
           else
             echo "OCI CLI already installed"
           fi
-        
-      # - name: Setup SSH
-      #   run: |                    
-      #     echo "---------------------------------------------------------------"
-      #     echo "Configure SSH Tunnel to OKE Cluster"
-      #     echo "---------------------------------------------------------------"
-
-      #     ssh-keygen -b 2048 -t rsa -f ~/.ssh/id_rsa -q -N "" -y
-      #     ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts
-
-      #     cat ~/.ssh/id_rsa.pub | tr -d '\n' > ~/.ssh/id_rsa_updated.pub
-      #     export ssh_public_key="~/.ssh/id_rsa_updated.pub"
-      #     export private_key="~/.ssh/id_rsa"
-      #     echo "" > ~/.ssh/config
-      #     echo "Host ${{ secrets.BASTION_HOST }}" >> ~/.ssh/config
-      #     echo "    IdentityFile ~/.ssh/id_rsa" >> ~/.ssh/config
-      #     echo "    HostkeyAlgorithms +ssh-rsa" >> ~/.ssh/config
-      #     echo "    StrictHostKeyChecking no" >> ~/.ssh/config
-      #     echo "    KexAlgorithms +diffie-hellman-group14-sha1" >> ~/.ssh/config
-      #     echo "    MACs +hmac-sha1" >> ~/.ssh/config
-      #     echo "    PubkeyAcceptedKeyTypes +ssh-rsa" >> ~/.ssh/config
-      #     echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ~/.ssh/config
-      #     echo "Host *" >> ~/.ssh/config
-      #     echo "    IdentityFile ~/.ssh/id_rsa" >> ~/.ssh/config
-      #     echo "    HostkeyAlgorithms +ssh-rsa" >> ~/.ssh/config
-      #     echo "    StrictHostKeyChecking no" >> ~/.ssh/config
-      #     echo "    KexAlgorithms +diffie-hellman-group14-sha1" >> ~/.ssh/config
-      #     echo "    MACs +hmac-sha1" >> ~/.ssh/config
-      #     echo "    PubkeyAcceptedKeyTypes +ssh-rsa" >> ~/.ssh/config
-      #     echo "    PubkeyAcceptedAlgorithms +ssh-rsa" >> ~/.ssh/config
-          
-      #     ls -l ~/.ssh/
 
       - name: Setup SSH
         run: |
@@ -73,7 +42,7 @@ jobs:
 
       - name: Create Bastion Session
         run: |
-          export oke_private_ip=`oci ce cluster get --cluster-id ${{ vars.OKE_CLUSTER_OCID }} --query 'data.endpoints."private-endpoint"' | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"`
+          export oke_private_ip=`oci ce cluster get --cluster-id ${{ secrets.OKE_CLUSTER_OCID }} --query 'data.endpoints."private-endpoint"' | grep -E -o "([0-9]{1,3}[\.]){3}[0-9]{1,3}"`
           echo "oke_private_ip=$oke_private_ip" >> "$GITHUB_ENV"
           oci bastion session create-port-forwarding --bastion-id ${{ secrets.BASTION_OCID }} --display-name ga-to-oke-tunnel-$(date +%Y%m%d-%H%M) --ssh-public-key-file ~/.ssh/id_rsa.pub --key-type PUB --target-private-ip $oke_private_ip --target-port 6443 --wait-for-state SUCCEEDED > ~/bastion_session.json
           export bastion_session_ocid=`cat ~/bastion_session.json | grep bastionsession | awk '{print $2}' | tail -1 | tr -d '"'`          
@@ -106,11 +75,6 @@ jobs:
 
           oci bastion bastion update --bastion-id ${{ secrets.BASTION_OCID }} --client-cidr-list "$UPDATED" --force
 
-      # - name: Install kubectl
-      #   run: |
-      #     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-      #     sudo chmod 755 kubectl
-      #     sudo mv kubectl /usr/local/bin
       - name: Install kubectl
         run: |
           set -e
@@ -121,23 +85,8 @@ jobs:
           kubectl version --client
       
       - name: Configure OKE Cluster
-        # run: |
-        #   oci ce cluster create-kubeconfig --cluster-id ${{ vars.OKE_CLUSTER_OCID }} --file $HOME/.kube/config --region ${{ secrets.OCI_CLI_REGION }} --token-version 2.0.0  --kube-endpoint PRIVATE_ENDPOINT          
-        #   sed -i "s|${{ env.oke_private_ip }}|127.0.0.1|g" $HOME/.kube/config
-        #   sleep 5
-        #   kubectl cluster-info
-        #   if [ $? == 0 ]
-        #   then
-        #     echo "---------------------------------------------------------------"
-        #     echo "Successfully Connected to your Private OKE Cluster"
-        #     echo "---------------------------------------------------------------"
-        #   else
-        #     echo "---------------------------------------------------------------"
-        #     echo "Unable to Authenticate with Private OKE Cluster"
-        #     echo "---------------------------------------------------------------"
-        #   fi
         run: |
-          oci ce cluster create-kubeconfig --cluster-id ${{ vars.OKE_CLUSTER_OCID }} --file $HOME/.kube/config --region ${{ secrets.OCI_CLI_REGION }} --token-version 2.0.0  --kube-endpoint PRIVATE_ENDPOINT
+          oci ce cluster create-kubeconfig --cluster-id ${{ secrets.OKE_CLUSTER_OCID }} --file $HOME/.kube/config --region ${{ secrets.OCI_CLI_REGION }} --token-version 2.0.0  --kube-endpoint PRIVATE_ENDPOINT
           sleep 5
           sed -i 's#https://.*:6443#https://127.0.0.1:6443#g' $HOME/.kube/config
           sleep 5
@@ -147,16 +96,6 @@ jobs:
           cat $HOME/.kube/config
 
       - name: Start SSH Tunnel to OKE Cluster
-        # run: |          
-        #   ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
-        #   while [ $? != 0 ]
-        #   do
-        #   echo "---------------------------------------------------------------"
-        #   echo "Attempting again"
-        #   echo "---------------------------------------------------------------"
-        #   ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
-        #   done
-
         run: |
           ssh -i ~/.ssh/id_rsa \
           -o ExitOnForwardFailure=yes \
@@ -169,13 +108,6 @@ jobs:
       - name: Verify access
         run: |
           kubectl get no
-        
-      - name: Debug files
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Repo contents:"
-          ls -al -R
 
       - name: Deploy to OKE
         run: |
