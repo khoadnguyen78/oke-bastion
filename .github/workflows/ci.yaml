@@ -140,6 +140,10 @@ jobs:
           sed -i 's#https://.*:6443#https://127.0.0.1:6443#g' $HOME/.kube/config
           sleep 5
 
+      - name: Verify config file
+        run: |
+          cat $HOME/.kube/config
+
       - name: Start SSH Tunnel to OKE Cluster
         # run: |          
         #   ssh -o PubkeyAcceptedKeyTypes=+ssh-rsa -i ~/.ssh/id_rsa -fN -L 6443:${{ env.oke_private_ip }}:6443 -p 22 ${{ env.bastion_session_ocid }}@${{ secrets.BASTION_HOST }} -v 
@@ -158,24 +162,23 @@ jobs:
           -o ServerAliveCountMax=3 \
           -o StrictHostKeyChecking=no \
           -N -L 6443:${oke_private_ip}:6443 -p 22 \
-          ${bastion_session_ocid}@${{ secrets.BASTION_HOST }} > ssh_tunnel.log 2>&1 &
+          ${bastion_session_ocid}@${{ secrets.BASTION_HOST }} & > ssh_tunnel.log 2>&1
 
-      # - name: Noti
+      - name: Verify access
+        run: |
+          kubectl get no
+
+      # - name: Deploy to OKE
+      #   run: |
+      #     ls -l
+      #     kubectl get ns | grep -c "^nginx" || kubectl create namespace nginx
+      #     kubectl apply -f https://k8s.io/examples/application/deployment.yaml
+
+      # - name: Delete OCI Bastion Session
       #   run: |
       #     sleep 5
-      #     nc -zv 127.0.0.1 6443
-
-      - name: Deploy to OKE
-        run: |
-          ls -l
-          kubectl get ns | grep -c "^nginx" || kubectl create namespace nginx
-          kubectl apply -f https://k8s.io/examples/application/deployment.yaml
-
-      - name: Delete OCI Bastion Session
-        run: |
-          sleep 5
-          echo "---------------------------------------------------------------"
-          echo "Deleting OCI Bastion Session"
-          echo "---------------------------------------------------------------"
-          export bastion_session_ocid=`cat ~/bastion_session.json | grep bastionsession | awk '{print $2}' | tail -1 | tr -d '"'`
-          oci bastion session delete --session-id $bastion_session_ocid --force      
+      #     echo "---------------------------------------------------------------"
+      #     echo "Deleting OCI Bastion Session"
+      #     echo "---------------------------------------------------------------"
+      #     export bastion_session_ocid=`cat ~/bastion_session.json | grep bastionsession | awk '{print $2}' | tail -1 | tr -d '"'`
+      #     oci bastion session delete --session-id $bastion_session_ocid --force      
