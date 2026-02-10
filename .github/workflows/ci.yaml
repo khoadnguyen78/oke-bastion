@@ -168,17 +168,17 @@ jobs:
         run: |
           kubectl get no
 
-      # - name: Deploy to OKE
-      #   run: |
-      #     ls -l
-      #     kubectl get ns | grep -c "^nginx" || kubectl create namespace nginx
-      #     kubectl apply -f https://k8s.io/examples/application/deployment.yaml
+      - name: Deploy to OKE
+        run: |
+          kubectl run nginx --image=nginx -n default
+          sleep 10
+          kubectl get po -n default
 
-      # - name: Delete OCI Bastion Session
-      #   run: |
-      #     sleep 5
-      #     echo "---------------------------------------------------------------"
-      #     echo "Deleting OCI Bastion Session"
-      #     echo "---------------------------------------------------------------"
-      #     export bastion_session_ocid=`cat ~/bastion_session.json | grep bastionsession | awk '{print $2}' | tail -1 | tr -d '"'`
-      #     oci bastion session delete --session-id $bastion_session_ocid --force      
+      - name: Delete OCI Bastion Session
+        run: |
+          sleep 5
+          echo "---------------------------------------------------------------"
+          echo "Deleting OCI Bastion Session"
+          echo "---------------------------------------------------------------"
+          export bastion_session_ocid=`cat ~/bastion_session.json | grep bastionsession | awk '{print $2}' | tail -1 | tr -d '"'`
+          oci bastion session delete --session-id $bastion_session_ocid --force  
