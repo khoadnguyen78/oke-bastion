@@ -104,28 +104,38 @@ jobs:
 
           oci bastion bastion update --bastion-id ${{ secrets.BASTION_OCID }} --client-cidr-list "$UPDATED" --force
 
+      # - name: Install kubectl
+      #   run: |
+      #     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      #     sudo chmod 755 kubectl
+      #     sudo mv kubectl /usr/local/bin
       - name: Install kubectl
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo chmod 755 kubectl
-          sudo mv kubectl /usr/local/bin
+          set -e
+          K8S_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+          curl -LO "https://dl.k8s.io/release/${K8S_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client
       
       - name: Configure OKE Cluster
+        # run: |
+        #   oci ce cluster create-kubeconfig --cluster-id ${{ vars.OKE_CLUSTER_OCID }} --file $HOME/.kube/config --region ${{ secrets.OCI_CLI_REGION }} --token-version 2.0.0  --kube-endpoint PRIVATE_ENDPOINT          
+        #   sed -i "s|${{ env.oke_private_ip }}|127.0.0.1|g" $HOME/.kube/config
+        #   sleep 5
+        #   kubectl cluster-info
+        #   if [ $? == 0 ]
+        #   then
+        #     echo "---------------------------------------------------------------"
+        #     echo "Successfully Connected to your Private OKE Cluster"
+        #     echo "---------------------------------------------------------------"
+        #   else
+        #     echo "---------------------------------------------------------------"
+        #     echo "Unable to Authenticate with Private OKE Cluster"
+        #     echo "---------------------------------------------------------------"
+        #   fi
         run: |
-          oci ce cluster create-kubeconfig --cluster-id ${{ vars.OKE_CLUSTER_OCID }} --file $HOME/.kube/config --region ${{ secrets.OCI_CLI_REGION }} --token-version 2.0.0  --kube-endpoint PRIVATE_ENDPOINT          
-          sed -i "s|${{ env.oke_private_ip }}|127.0.0.1|g" $HOME/.kube/config
-          sleep 5
-          kubectl cluster-info
-          if [ $? == 0 ]
-          then
-            echo "---------------------------------------------------------------"
-            echo "Successfully Connected to your Private OKE Cluster"
-            echo "---------------------------------------------------------------"
-          else
-            echo "---------------------------------------------------------------"
-            echo "Unable to Authenticate with Private OKE Cluster"
-            echo "---------------------------------------------------------------"
-          fi
+          sed -i 's#https://.*:6443#https://127.0.0.1:6443#g' $HOME/.kube/config
 
       - name: Start SSH Tunnel to OKE Cluster
         # run: |          
