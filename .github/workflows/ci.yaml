@@ -170,8 +170,10 @@ jobs:
 
       - name: Deploy to OKE
         run: |
-          kubectl run nginx --image=nginx -n default
-          sleep 10
+          helm install demo ./typescript-docker-multi-stage-build/ --namespace default
+          sleep 5
+          helm list -n default
+          sleep 5
           kubectl get po -n default
 
       - name: Delete OCI Bastion Session

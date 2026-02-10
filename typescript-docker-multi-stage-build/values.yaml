@@ -1,0 +1,75 @@
+replicaCount: 1
+
+image:
+  repository: sin.ocir.io/ax34lz6ob0qj/typescript-docker-multi-stage-build
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5000
+
+ingress:
+  enabled: true
+  className: native-ic-ingress-class
+  annotations:
+    oci.oraclecloud.com/healthcheck-path: /
+    oci.oraclecloud.com/healthcheck-port: "8080"
+    oci.oraclecloud.com/healthcheck-protocol: HTTP
+    oci.oraclecloud.com/healthcheck-return-code: "200"
+    oci.oraclecloud.com/load-balancer-type: lb
+  hosts:
+    - paths:
+      - path: /
+        pathType: Prefix
+        servicePort: 8080
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+imagePullSecrets:
+  - name: ocir-secret
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# values for added configmaps
+configMaps:
+  appConfig:
+    LOG_LEVEL: info
+    CACHE_TTL: "300"
+
+# values for added secrets
+secrets:
+  database:
+    DB_HOST: mysql
+    DB_USER: order_user
+    DB_PASSWORD: change_me
+
+  paymentApi:
+    API_KEY: change_me
+    API_SECRET: change_me
+
+  internalAuth:
+    JWT_SECRET: change_me
